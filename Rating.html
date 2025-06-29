@@ -2,39 +2,197 @@
 <html>
 <head>
   <title>Thread Rating</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #fafafa;
+      color: #202124;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       padding: 20px;
     }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+      padding: 32px;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    h2 {
+      font-size: 24px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #202124;
+    }
+
+    .subtitle {
+      color: #5f6368;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
     #loading {
-      font-weight: bold;
-      color: #555;
+      font-size: 14px;
+      color: #5f6368;
+      margin-bottom: 16px;
     }
-    .rating-buttons button {
-      font-size: 16px;
-      margin: 3px;
-      padding: 5px 10px;
-    }
+
     #average {
-      font-weight: bold;
-      margin-top: 20px;
+      font-size: 16px;
+      color: #202124;
+      margin-bottom: 24px;
+      padding: 16px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #4285f4;
     }
+
+    .rating-section {
+      margin-bottom: 24px;
+    }
+
+    .rating-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #202124;
+      margin-bottom: 12px;
+    }
+
+    .rating-buttons {
+      display: grid;
+      grid-template-columns: repeat(11, 1fr);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .rating-buttons button {
+      height: 44px;
+      border: 1px solid #dadce0;
+      background: white;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #5f6368;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rating-buttons button:hover {
+      border-color: #4285f4;
+      background-color: #f8f9ff;
+      color: #4285f4;
+    }
+
+    .rating-buttons button.selected {
+      background-color: #4285f4;
+      border-color: #4285f4;
+      color: white;
+    }
+
+    #submitBtn {
+      width: 100%;
+      height: 48px;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      margin-bottom: 16px;
+    }
+
+    #submitBtn:hover:not(:disabled) {
+      background-color: #3367d6;
+    }
+
+    #submitBtn:disabled {
+      background-color: #dadce0;
+      color: #5f6368;
+      cursor: not-allowed;
+    }
+
+    .info-text {
+      font-size: 14px;
+      color: #5f6368;
+      margin-bottom: 8px;
+    }
+
+    #your-rating {
+      font-size: 14px;
+      color: #202124;
+      padding: 12px 16px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
     #error {
-      color: red;
-      margin-top: 10px;
+      color: #d93025;
+      font-size: 14px;
+      margin-top: 8px;
+      padding: 12px 16px;
+      background-color: #fce8e6;
+      border-radius: 8px;
+      border-left: 4px solid #d93025;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #5f6368;
+      font-size: 14px;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 24px;
+        margin: 16px;
+      }
+      
+      .rating-buttons {
+        grid-template-columns: repeat(6, 1fr);
+      }
+      
+      h2 {
+        font-size: 20px;
+      }
     }
   </style>
 </head>
 <body>
-  <h2>Rate this Post (0–10)</h2>
-  <div id="loading">Loading ratings...</div>
-  <p id="average"></p>
+  <div class="container">
+    <h2>Rate this Post</h2>
+    <p class="subtitle">Share your rating from 0 to 10</p>
+    
+    <div id="loading">Loading ratings...</div>
+    <div id="average"></div>
 
-  <div class="rating-buttons" id="rating-buttons"></div>
-  <button id="submitBtn" disabled>Post Rating</button>
-  <p id="your-rating">Your rating: Not set</p>
-  <p id="error"></p>
+    <div class="rating-section">
+      <div class="rating-label">Select your rating</div>
+      <div class="rating-buttons" id="rating-buttons"></div>
+      <button id="submitBtn" disabled>Submit Rating</button>
+    </div>
+
+    <div id="your-rating" class="info-text">Your rating: Not set</div>
+    <div id="error"></div>
+  </div>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -73,6 +231,13 @@
       const btn = document.createElement('button');
       btn.textContent = i;
       btn.addEventListener('click', () => {
+        // Remove selected class from all buttons
+        document.querySelectorAll('.rating-buttons button').forEach(b => {
+          b.classList.remove('selected');
+        });
+        // Add selected class to clicked button
+        btn.classList.add('selected');
+        
         selectedRating = i;
         submitBtn.disabled = false;
         errorP.textContent = '';
@@ -87,7 +252,7 @@
       loadRatings();
       loadYourRating();
     }).catch(error => {
-      errorP.textContent = 'Auth error: ' + error.message;
+      errorP.textContent = 'Authentication error: ' + error.message;
       loadingP.textContent = '';
     });
 
@@ -105,10 +270,10 @@
             count++;
           });
           if (count === 0) {
-            averageP.textContent = 'No ratings yet.';
+            averageP.innerHTML = '<div class="empty-state">No ratings yet. Be the first to rate!</div>';
           } else {
-            const avg = (total / count).toFixed(2);
-            averageP.textContent = `Overall rating: ${avg}/10 from ${count} user${count===1?'':'s'}`;
+            const avg = (total / count).toFixed(1);
+            averageP.innerHTML = `<strong>${avg}/10</strong> from ${count} user${count===1?'':'s'}`;
           }
           loadingP.textContent = '';
         })
@@ -126,6 +291,13 @@
           if (doc.exists) {
             const r = doc.data().rating;
             yourRatingP.textContent = `Your rating: ${r}/10`;
+            
+            // Highlight the user's previous rating
+            document.querySelectorAll('.rating-buttons button').forEach((btn, index) => {
+              if (index === r) {
+                btn.classList.add('selected');
+              }
+            });
           }
         })
         .catch(error => {
@@ -140,7 +312,7 @@
       }
       errorP.textContent = '';
       submitBtn.disabled = true;
-      loadingP.textContent = 'Submitting...';
+      loadingP.textContent = 'Submitting your rating...';
 
       db.collection('posts').doc(threadId)
         .collection('ratings').doc(currentUserId)
