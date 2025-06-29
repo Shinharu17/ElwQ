@@ -212,7 +212,7 @@
           <option value="">Select a rating</option>
           <script>
             for (let i = 0; i <= 10; i++) {
-              document.write(`<option value="${i}">${i}</option>`);
+              document.write(`<option value="${i}">${i}/10</option>`);
             }
           </script>
         </select>
@@ -220,7 +220,6 @@
       </div>
     </div>
 
-    <p id="your-rating" class="small-text">Your rating: Not set</p>
     <div id="error"></div>
   </div>
 
@@ -275,9 +274,9 @@
       return starsHtml;
     }
 
-    // Function to format rating number (remove decimals if whole number)
+    // Function to format rating number (show one decimal place)
     function formatRating(rating) {
-      return rating % 1 === 0 ? rating.toString() : rating.toFixed(1);
+      return rating.toFixed(1);
     }
 
     // Toggle rating selection
@@ -331,22 +330,7 @@
     }
 
     function loadYourRating() {
-      db.collection('posts').doc(threadId)
-        .collection('ratings').doc(currentUserId)
-        .get()
-        .then(doc => {
-          if (doc.exists) {
-            const r = doc.data().rating;
-            const starsHtml = createStarDisplay(r);
-            yourRatingP.innerHTML = `
-              Your rating: ${r}/10 
-              <div class="your-rating-stars">${starsHtml}</div>
-            `;
-          }
-        })
-        .catch(error => {
-          errorP.textContent = 'Error loading your rating: ' + error.message;
-        });
+      // Function removed - no longer showing user's rating
     }
 
     function submitRating() {
@@ -365,11 +349,6 @@
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         })
         .then(() => {
-          const starsHtml = createStarDisplay(parseInt(selected));
-          yourRatingP.innerHTML = `
-            Your rating: ${selected}/10 
-            <div class="your-rating-stars">${starsHtml}</div>
-          `;
           loadingP.textContent = '';
           ratingSection.style.display = 'none';
           loadRatings();
