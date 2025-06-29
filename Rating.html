@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Thread Rating</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .rating-buttons button {
+      font-size: 16px;
+      margin: 3px;
+      padding: 5px 10px;
+    }
+    #average {
+      font-weight: bold;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Rate this Post (0–10)</h2>
+  <div class="rating-buttons" id="rating-buttons"></div>
+  <p id="your-rating">Your rating: Not set</p>
+  <p id="average">Loading average rating...</p>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBii6O_yh0kisKfD0D_zNRrv86pYUPD-wQ",
+      authDomain: "review-62187.firebaseapp.com",
+      projectId: "review-62187",
+      storageBucket: "review-62187.appspot.com",
+      messagingSenderId: "891310783225",
+      appId: "1:891310783225:web:c96f3e2168d48f55af0028"
+    };
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Get thread ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const threadId = urlParams.get('thread') || 'default-thread';
+
+    // Elements
+    const ratingButtonsDiv = document.getElementById('rating-buttons');
+    const yourRatingP = document.getElementById('your-rating');
+    const averageP = document.getElementById('average');
+
+    // Render buttons 0-10
+    for (let i = 0; i <= 10; i++) {
+      const btn = document.createElement('button');
+      btn.textContent = i;
+      btn.addEventListener('click', () => submitRating(i));
+      ratingButtonsDiv.appendChild(btn);
+    }
+
+    let currentUserId = null;
+
+    // Sign in anonymously
+    auth.signInAnonymously().then(() => {
+      currentUserId = auth.currentUser.uid;
+      console.log('Signed in as:', currentUserId);
+      // Load current user's rating
+      loadYourRating();
+      // Load all ratings to compute average
+      loadAverageRating();
+    }).catch(error => {
+      console.error('Auth error:', error);
+    });
+
+    // Submit rating
+    function submitRating(value) {
+      if (!currentUserId) return;
+      db.collection('posts').doc(threadId)
+        .collection('ratings').doc(currentUserId)
+        .set({
+          rating: value,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .then(() => {
+          yourRatingP.textContent = `Your rating: ${value}/10`;
+          loadAverageRating();
+        })
+        .catch(error => {
+          console.error('Error saving rating:', error);
+        });
+    }
+
+    // Load your rating
+    function loadYourRating() {
+      db.collection('posts').doc(threadId)
+        .collection('ratings').doc(currentUserId)
+        .get()
+        .then(doc => {
+          if (doc.exists) {
+            const r = doc.data().rating;
+            yourRatingP.textContent = `Your rating: ${r}/10`;
+          }
+        });
+    }
+
+    // Load and compute average rating
+    function loadAverageRating() {
+      db.collection('posts').doc(threadId)
+        .collection('ratings')
+        .get()
+        .then(snapshot => {
+          let total = 0;
+          let count = 0;
+          snapshot.forEach(doc => {
+            total += doc.data().rating;
+            count++;
+          });
+          if (count === 0) {
+            averageP.textContent = 'No ratings yet.';
+          } else {
+            const avg = (total / count).toFixed(2);
+            averageP.textContent = `Average rating: ${avg}/10 (from ${count} user${count === 1 ? '' : 's'})`;
+          }
+        });
+    }
+  </script>
+</body>
+</html>
