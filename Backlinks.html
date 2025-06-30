@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Backlinks</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin:0; padding:0;
+      background:#f5f5f5;
+      color:#222;
+    }
+    header {
+      padding:10px;
+      background:#fff;
+      position:sticky;
+      top:0;
+      box-shadow:0 2px 4px rgba(0,0,0,0.1);
+      z-index:2;
+    }
+    #searchBar {
+      width:100%;
+      padding:10px;
+      font-size:16px;
+      border:1px solid #ddd;
+      border-radius:4px;
+    }
+    table {
+      width:100%;
+      border-collapse: collapse;
+      margin-top:10px;
+      background:#fff;
+    }
+    th, td {
+      padding:12px;
+      border-bottom:1px solid #eee;
+      text-align:left;
+    }
+    tbody tr:hover {
+      background:#f9f9f9;
+    }
+    #loadMore {
+      padding:15px;
+      text-align:center;
+      cursor:pointer;
+      color:#555;
+    }
+    #loadMore:hover {
+      background:#eee;
+    }
+    #navbar {
+      position:fixed;
+      bottom:0; left:0; right:0;
+      background:#333;
+      color:#fff;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:12px 16px;
+      box-shadow:0 -2px 4px rgba(0,0,0,0.2);
+      z-index:3;
+    }
+    #navbar button {
+      background:none;
+      border:none;
+      color:#fff;
+      font-size:16px;
+      cursor:pointer;
+      padding:8px 12px;
+      border-radius:4px;
+      transition:background 0.2s;
+    }
+    #navbar button:hover {
+      background:rgba(255,255,255,0.1);
+    }
+    #menu {
+      position:fixed;
+      top:0; left:0; right:0; bottom:0;
+      background:#fff;
+      transform:translateY(-100%);
+      transition:transform 0.3s ease;
+      padding:20px;
+      z-index:5;
+      overflow-y:auto;
+    }
+    #menu.open {
+      transform:translateY(0);
+    }
+    #menu .close {
+      float:right;
+      cursor:pointer;
+      font-size:24px;
+      font-weight:bold;
+      color:#333;
+    }
+    #menu h2 {
+      margin-top:0;
+      font-size:22px;
+      color:#333;
+    }
+    #menu ul {
+      list-style:none;
+      padding:0;
+    }
+    #menu li {
+      margin:15px 0;
+      font-size:18px;
+    }
+    #menu li a {
+      color:#333;
+      text-decoration:none;
+    }
+    #menu li a:hover {
+      text-decoration:underline;
+    }
+    #emptyMessage {
+      text-align:center;
+      padding:30px;
+      color:#777;
+      font-size:18px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <input id="searchBar" placeholder="Search by link ID (e.g., bl628)" />
+</header>
+
+<table id="linksTable">
+  <thead>
+    <tr><th>Link ID</th><th>Link</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<div id="emptyMessage" style="display:none;">No links here yet.</div>
+
+<div id="loadMore">Load more...</div>
+
+<div id="navbar">
+  <button id="createLinkBtn">➕ Create Link</button>
+  <button id="menuBtn">☰ Menu</button>
+</div>
+
+<div id="menu">
+  <div class="close" id="closeMenu">✕</div>
+  <h2>Menu</h2>
+  <ul>
+    <li><a href="#">Terms and Conditions</a></li>
+    <li><a href="#">Privacy Policy</a></li>
+    <li><a href="#">About</a></li>
+  </ul>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBOVTa4VEb9MjkDK_T7wOc7dQmfKABcHaY",
+    authDomain: "backlinks-6dc29.firebaseapp.com",
+    projectId: "backlinks-6dc29",
+    storageBucket: "backlinks-6dc29.appspot.com",
+    messagingSenderId: "591778717866",
+    appId: "1:591778717866:web:614f962827d060d49130d3"
+  };
+
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+
+  let lastVisible = null;
+  let initialLoadDone = false;
+
+  auth.signInAnonymously().then(() => {
+    loadLinks();
+  });
+
+  function loadLinks() {
+    let query = db.collection('links')
+      .orderBy(firebase.firestore.FieldPath.documentId())
+      .limit(10);
+
+    if (lastVisible) {
+      query = query.startAfter(lastVisible);
+    }
+
+    query.get().then(snapshot => {
+      const tbody = document.querySelector('#linksTable tbody');
+      if (snapshot.empty) {
+        if (!initialLoadDone) {
+          document.getElementById('emptyMessage').style.display = 'block';
+        }
+        document.getElementById('loadMore').innerText = 'No more links';
+        return;
+      }
+      snapshot.forEach(doc => {
+        document.getElementById('emptyMessage').style.display = 'none';
+        const data = doc.data();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${data.id}</td>
+          <td><a href="${data.url}" target="_blank">${data.url}</a></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      lastVisible = snapshot.docs[snapshot.docs.length -1];
+      initialLoadDone = true;
+    });
+  }
+
+  document.getElementById('loadMore').addEventListener('click', loadLinks);
+
+  document.getElementById('searchBar').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      searchLink(this.value.trim());
+    }
+  });
+
+  function searchLink(id) {
+    if(!id) return;
+    db.collection('links')
+      .where('id','==',id)
+      .get()
+      .then(snapshot=>{
+        const tbody = document.querySelector('#linksTable tbody');
+        tbody.innerHTML = '';
+        if(snapshot.empty){
+          document.getElementById('emptyMessage').style.display = 'block';
+          document.getElementById('loadMore').style.display = 'none';
+        }else{
+          document.getElementById('emptyMessage').style.display = 'none';
+          snapshot.forEach(doc=>{
+            const data = doc.data();
+            const tr = document.createElement('tr');
+            tr.innerHTML=`
+              <td>${data.id}</td>
+              <td><a href="${data.url}" target="_blank">${data.url}</a></td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      });
+  }
+
+  // Menu toggle
+  document.getElementById('menuBtn').addEventListener('click', ()=>{
+    document.getElementById('menu').classList.add('open');
+  });
+  document.getElementById('closeMenu').addEventListener('click', ()=>{
+    document.getElementById('menu').classList.remove('open');
+  });
+
+  // Create Link button
+  document.getElementById('createLinkBtn').addEventListener('click', ()=>{
+    window.location.href='create.html';
+  });
+</script>
+</body>
+</html>
