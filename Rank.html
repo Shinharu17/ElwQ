@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thread Rating</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: #ffffff;
+      color: #000000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 20px; 
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.4;
+    }
+    
+    .rating-container {
+      background: white;
+      border: 0px solid #e0e0e0;
+      padding: 24px;
+    }
+    
+    h3 {
+      font-weight: 600;
+      font-size: 18px;
+      margin: 0 0 16px 0;
+      color: #000000;
+    }
+    
+    #loading {
+      font-size: 14px;
+      color: #666666;
+      margin-bottom: 12px;
+    }
+    
+    #average {
+      font-size: 15px;
+      font-weight: 500;
+      margin: 0 0 16px 0;
+      color: #000000;
+      padding: 12px 0;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .stars-display {
+      display: flex;
+      gap: 2px;
+      font-size: 16px;
+    }
+    
+    .star {
+      color: #000000;
+    }
+    
+    .star.empty {
+      color: #e0e0e0;
+    }
+    
+    #error {
+      color: #000000;
+      font-size: 13px;
+      margin-top: 12px;
+      padding: 8px 0;
+      border-top: 1px solid #e0e0e0;
+    }
+    
+    #rating-section {
+      display: none;
+      margin-top: 16px;
+      padding: 16px 0;
+      border-top: 1px solid #e0e0e0;
+    }
+    
+    .form-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    
+    select {
+      padding: 8px 12px;
+      font-size: 14px;
+      border: 1px solid #cccccc;
+      background: #ffffff;
+      color: #000000;
+      min-width: 140px;
+      flex: 1;
+    }
+    
+    select:focus {
+      border-color: #000000;
+      outline: none;
+    }
+    
+    button {
+      padding: 8px 16px;
+      font-size: 14px;
+      background: #000000;
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    button:hover {
+      background: #333333;
+    }
+    
+    #post-review-btn {
+      width: 100%;
+      margin-top: 4px;
+      background: #000000;
+      font-size: 14px;
+      padding: 10px;
+    }
+    
+    #post-review-btn:hover {
+      background: #333333;
+    }
+    
+    .small-text {
+      font-size: 13px;
+      color: #666666;
+      margin-top: 16px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .your-rating-stars {
+      display: flex;
+      gap: 1px;
+      font-size: 12px;
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 480px) {
+      body {
+        padding: 16px;
+        max-width: 100%;
+      }
+      
+      .rating-container {
+        padding: 20px;
+      }
+      
+      .form-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      
+      select {
+        min-width: 100%;
+      }
+      
+      button {
+        width: 100%;
+      }
+      
+      #average {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      
+      .small-text {
+        flex-direction: column;
+        gap: 4px;
+      }
+    }
+    
+    /* Tablet */
+    @media (min-width: 481px) and (max-width: 768px) {
+      body {
+        max-width: 500px;
+        padding: 24px;
+      }
+    }
+    
+    /* Desktop */
+    @media (min-width: 769px) {
+      body {
+        max-width: 450px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="rating-container">
+    <h3>Rate this Post (0–10)</h3>
+    <div id="loading">Loading ratings...</div>
+    <div id="average"></div>
+
+    <button id="post-review-btn">Post a Review</button>
+
+    <div id="rating-section">
+      <div class="form-row">
+        <select id="rating-select">
+          <option value="">Select a rating</option>
+          <script>
+            for (let i = 0; i <= 10; i++) {
+              document.write(`<option value="${i}">${i}/10</option>`);
+            }
+          </script>
+        </select>
+        <button id="submitBtn">Submit</button>
+      </div>
+    </div>
+
+    <div id="error"></div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBii6O_yh0kisKfD0D_zNRrv86pYUPD-wQ",
+      authDomain: "review-62187.firebaseapp.com",
+      projectId: "review-62187",
+      storageBucket: "review-62187.appspot.com",
+      messagingSenderId: "891310783225",
+      appId: "1:891310783225:web:c96f3e2168d48f55af0028"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const threadId = urlParams.get('thread') || 'default-thread';
+
+    const loadingP = document.getElementById('loading');
+    const averageP = document.getElementById('average');
+    const yourRatingP = document.getElementById('your-rating');
+    const errorP = document.getElementById('error');
+    const postReviewBtn = document.getElementById('post-review-btn');
+    const ratingSection = document.getElementById('rating-section');
+    const ratingSelect = document.getElementById('rating-select');
+    const submitBtn = document.getElementById('submitBtn');
+
+    let currentUserId = null;
+
+    // Function to create minimal star display
+    function createStarDisplay(rating, maxStars = 5) {
+      const normalizedRating = (rating / 10) * maxStars;
+      const fullStars = Math.round(normalizedRating);
+      
+      let starsHtml = '';
+      
+      for (let i = 0; i < maxStars; i++) {
+        if (i < fullStars) {
+          starsHtml += '<span class="star">★</span>';
+        } else {
+          starsHtml += '<span class="star empty">★</span>';
+        }
+      }
+      
+      return starsHtml;
+    }
+
+    // Function to format rating number (show one decimal place)
+    function formatRating(rating) {
+      return rating.toFixed(1);
+    }
+
+    // Toggle rating selection
+    postReviewBtn.addEventListener('click', () => {
+      const currentDisplay = getComputedStyle(ratingSection).display;
+      ratingSection.style.display = currentDisplay === 'none' ? 'block' : 'none';
+      errorP.textContent = '';
+    });
+
+    submitBtn.addEventListener('click', submitRating);
+
+    auth.signInAnonymously().then(() => {
+      currentUserId = auth.currentUser.uid;
+      loadRatings();
+      loadYourRating();
+    }).catch(error => {
+      errorP.textContent = 'Auth error: ' + error.message;
+      loadingP.textContent = '';
+    });
+
+    function loadRatings() {
+      loadingP.textContent = 'Loading ratings...';
+      averageP.innerHTML = '';
+      db.collection('posts').doc(threadId)
+        .collection('ratings')
+        .get()
+        .then(snapshot => {
+          let total = 0;
+          let count = 0;
+          snapshot.forEach(doc => {
+            total += doc.data().rating;
+            count++;
+          });
+          if (count === 0) {
+            averageP.innerHTML = 'No ratings yet.';
+          } else {
+            const avg = total / count;
+            const formattedAvg = formatRating(avg);
+            const starsHtml = createStarDisplay(avg);
+            averageP.innerHTML = `
+              <span>Overall rating: ${formattedAvg}/10 (${count} user${count === 1 ? '' : 's'})</span>
+              <div class="stars-display">${starsHtml}</div>
+            `;
+          }
+          loadingP.textContent = '';
+        })
+        .catch(error => {
+          errorP.textContent = 'Error loading ratings: ' + error.message;
+          loadingP.textContent = '';
+        });
+    }
+
+    function loadYourRating() {
+      // Function removed - no longer showing user's rating
+    }
+
+    function submitRating() {
+      const selected = ratingSelect.value;
+      if (selected === "") {
+        errorP.textContent = 'Please select a rating before submitting.';
+        return;
+      }
+      errorP.textContent = '';
+      loadingP.textContent = 'Submitting...';
+
+      db.collection('posts').doc(threadId)
+        .collection('ratings').doc(currentUserId)
+        .set({
+          rating: parseInt(selected),
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .then(() => {
+          loadingP.textContent = '';
+          ratingSection.style.display = 'none';
+          loadRatings();
+        })
+        .catch(error => {
+          errorP.textContent = 'Error submitting rating: ' + error.message;
+          loadingP.textContent = '';
+        });
+    }
+  </script>
+</body>
+</html>
